@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email Link Generator</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    max-width: 720px;
+    margin: 24px auto;
+    padding: 0 16px 48px;
+    color: #1f2937;
+    background: #f9fafb;
+  }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  p.sub { color: #6b7280; margin-top: 0; font-size: 14px; }
+  label { display: block; font-weight: 600; margin: 16px 0 6px; font-size: 14px; }
+  input, textarea {
+    width: 100%; padding: 10px 12px;
+    border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 14px; font-family: inherit; background: #fff;
+  }
+  textarea { min-height: 160px; resize: vertical; }
+  button {
+    margin-top: 20px; padding: 12px 20px;
+    background: #2563eb; color: #fff;
+    border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  button:hover { background: #1d4ed8; }
+  button.secondary { background: #6b7280; margin-left: 8px; }
+  button.secondary:hover { background: #4b5563; }
+  #outputWrap { margin-top: 24px; display: none; }
+  #output {
+    width: 100%; min-height: 80px;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px; word-break: break-all; background: #fff;
+  }
+  .hint { font-size: 12px; color: #6b7280; margin-top: 6px; }
+  .status {
+    margin-top: 10px; font-size: 13px;
+    color: #059669; font-weight: 600; display: none;
+  }
+  .warn {
+    background: #fef3c7; border: 1px solid #fbbf24;
+    color: #92400e; padding: 10px 14px;
+    border-radius: 8px; font-size: 13px; margin-top: 16px;
+  }
+  /* Redirect view */
+  #redirectView {
+    display: none; text-align: center; padding: 60px 20px;
+  }
+  #redirectView h2 { font-size: 20px; margin-bottom: 12px; }
+  #redirectView p { color: #6b7280; font-size: 14px; }
+  #redirectView a.bigBtn {
+    display: inline-block; margin-top: 20px;
+    padding: 14px 28px; background: #2563eb; color: #fff;
+    text-decoration: none; border-radius: 10px;
+    font-weight: 600; font-size: 16px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ GENERATOR VIEW ============ -->
+<div id="generatorView">
+  <h1>Email Link Generator</h1>
+  <p class="sub">Fill in → Generate → Copy → Paste into WhatsApp group.</p>
+
+  <label for="to">Recipient email(s)</label>
+  <input id="to" type="text" placeholder="teacher@example.com, boss@example.com" />
+
+  <label for="subject">Subject</label>
+  <input id="subject" type="text" placeholder="Assignment submission" />
+
+  <label for="body">Body</label>
+  <textarea id="body" placeholder="Dear Sir,&#10;&#10;Please find my assignment attached.&#10;&#10;Regards,&#10;Student"></textarea>
+
+  <button onclick="generate()">Generate Link</button>
+
+  <div id="outputWrap">
+    <label for="output">Shareable link (paste in WhatsApp)</label>
+    <textarea id="output" readonly></textarea>
+    <button class="secondary" onclick="copyLink()">Copy Link</button>
+    <div class="status" id="status">Copied!</div>
+    <p class="hint">
+      Note: Very long bodies (over ~1500 chars) may exceed URL limits on some devices. Keep bodies concise.
+    </p>
+  </div>
+
+  <div class="warn">
+    <strong>How students use it:</strong> Tap the link in WhatsApp → the browser opens → Gmail launches with everything filled → tap <em>Send</em>.
+  </div>
+</div>
+
+<!-- ============ REDIRECT VIEW ============ -->
+<div id="redirectView">
+  <h2>Opening your email…</h2>
+  <p>If Gmail does not open automatically, tap the button below.</p>
+  <a class="bigBtn" id="manualOpen" href="#">Open in Email App</a>
+</div>
+
+<script>
+// ---------- MODE DETECTION ----------
+const params = new URLSearchParams(window.location.search);
+
+if (params.has('to')) {
+  // REDIRECT MODE: build mailto: and launch
+  document.getElementById('generatorView').style.display = 'none';
+  document.getElementById('redirectView').style.display = 'block';
+
+  const to = params.get('to') || '';
+  const subject = params.get('subject') || '';
+  const body = params.get('body') || '';
+
+  const mailto =
+    'mailto:' + encodeURIComponent(to).replace(/%40/g, '@').replace(/%2C/g, ',')
+    + '?subject=' + encodeURIComponent(subject)
+    + '&body=' + encodeURIComponent(body);
+
+  document.getElementById('manualOpen').href = mailto;
+
+  // Auto-launch after a tiny delay so the page renders first
+  setTimeout(() => {
+    window.location.href = mailto;
+  }, 100);
+
+} else {
+  // GENERATOR MODE
+  document.getElementById('generatorView').style.display = 'block';
+  document.getElementById('redirectView').style.display = 'none';
+}
+
+// ---------- GENERATOR FUNCTIONS ----------
+function generate() {
+  const to = document.getElementById('to').value.trim();
+  const subject = document.getElementById('subject').value;
+  const body = document.getElementById('body').value;
+
+  if (!to) { alert('Enter at least one recipient email.'); return; }
+
+  // Base URL = the page's own address (works on any host)
+  const base = window.location.origin + window.location.pathname;
+
+  const link = base
+    + '?to=' + encodeURIComponent(to)
+    + '&subject=' + encodeURIComponent(subject)
+    + '&body=' + encodeURIComponent(body);
+
+  document.getElementById('output').value = link;
+  document.getElementById('outputWrap').style.display = 'block';
+  document.getElementById('status').style.display = 'none';
+
+  if (link.length > 2000) {
+    alert('Warning: link is ' + link.length + ' chars. Some phones may truncate it. Shorten the body.');
+  }
+}
+
+function copyLink() {
+  const out = document.getElementById('output');
+  if (!out.value) { alert('Generate a link first.'); return; }
+  out.select(); out.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(out.value)
+    .then(() => {
+      document.getElementById('status').style.display = 'block';
+      setTimeout(() => document.getElementById('status').style.display = 'none', 2000);
+    })
+    .catch(() => { document.execCommand('copy'); });
+}
+</script>
+
+</body>
+</html>
